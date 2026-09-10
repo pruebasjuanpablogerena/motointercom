@@ -1,0 +1,46 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.google.gms.google-services'
+}
+
+android {
+    namespace 'com.motointercom.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.motointercom.app"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+
+    // Sala por internet (walkie-talkie): mensajes de voz cortos vía Firebase.
+    // El audio va como texto (Base64) dentro de la Realtime Database, así que
+    // no hace falta Firebase Storage (que exige el plan de pago Blaze).
+    implementation platform('com.google.firebase:firebase-bom:33.1.2')
+    implementation 'com.google.firebase:firebase-database-ktx'
+
+    // Generar el código QR de la sala directamente en el celular, sin internet.
+    implementation 'com.google.zxing:core:3.5.3'
+}

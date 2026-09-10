@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/motero_fondo"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:padding="28dp">
+
+        <ImageView
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:layout_marginTop="16dp"
+            android:src="@mipmap/ic_launcher"
+            android:contentDescription="@string/app_name" />
+
+        <TextView
+            android:id="@+id/txtTitulo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MotoIntercom"
+            android:textColor="@color/motero_acento"
+            android:textSize="30sp"
+            android:textStyle="bold"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Comunicación entre cascos"
+            android:textColor="@color/motero_texto_tenue"
+            android:textSize="13sp"
+            android:layout_marginBottom="20dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:background="@drawable/divider_carretera"
+            android:layout_marginBottom="20dp" />
+
+        <TextView
+            android:id="@+id/txtEstado"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Desconectado"
+            android:textColor="@color/motero_texto"
+            android:textSize="16sp"
+            android:gravity="center"
+            android:padding="16dp"
+            android:background="@drawable/bg_panel"
+            android:layout_marginBottom="24dp" />
+
+        <Button
+            android:id="@+id/btnConductor"
+            style="@style/BotonMotero"
+            android:text="Soy el conductor (esperar conexión)" />
+
+        <Button
+            android:id="@+id/btnPasajero"
+            style="@style/BotonMotero"
+            android:layout_marginTop="10dp"
+            android:text="Soy el pasajero (conectar)" />
+
+        <Button
+            android:id="@+id/btnSilenciar"
+            style="@style/BotonMotero"
+            android:background="@drawable/bg_boton_encendido"
+            android:layout_marginTop="24dp"
+            android:enabled="false"
+            android:text="Silenciar micrófono" />
+
+        <Button
+            android:id="@+id/btnAltavoz"
+            style="@style/BotonMotero"
+            android:background="@drawable/bg_boton_apagado"
+            android:layout_marginTop="10dp"
+            android:enabled="false"
+            android:text="Altavoz: apagado" />
+
+        <Switch
+            android:id="@+id/switchAudifonosBluetooth"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Usar audífonos Bluetooth (si hay mucho retraso, desactívalo)"
+            android:textColor="@color/motero_texto"
+            android:checked="true"
+            android:thumbTint="@color/switch_thumb_color"
+            android:trackTint="@color/switch_track_color"
+            android:layout_marginTop="14dp" />
+
+        <Button
+            android:id="@+id/btnRadioOnline"
+            style="@style/BotonMotero"
+            android:layout_marginTop="24dp"
+            android:text="📻 Radio Online" />
+
+        <Button
+            android:id="@+id/btnSalaInternet"
+            style="@style/BotonMotero"
+            android:layout_marginTop="10dp"
+            android:text="🌐 Sala por Internet" />
+
+        <Button
+            android:id="@+id/btnDesconectar"
+            style="@style/BotonMoteroAlerta"
+            android:layout_marginTop="10dp"
+            android:enabled="false"
+            android:text="Desconectar" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Volumen de la llamada"
+            android:textColor="@color/motero_texto_tenue"
+            android:textSize="13sp"
+            android:layout_marginTop="26dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="4dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔈"
+                android:textSize="18sp" />
+
+            <SeekBar
+                android:id="@+id/seekVolumen"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:max="100"
+                android:progress="25"
+                android:enabled="false"
+                android:progressTint="@color/motero_acento"
+                android:thumbTint="@color/motero_acento" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔊"
+                android:textSize="18sp" />
+        </LinearLayout>
+
+        <Switch
+            android:id="@+id/switchCompartirMusica"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Compartir mi música/GPS"
+            android:textColor="@color/motero_texto"
+            android:enabled="false"
+            android:thumbTint="@color/switch_thumb_color"
+            android:trackTint="@color/switch_track_color"
+            android:layout_marginTop="26dp"
+            android:layout_marginBottom="24dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:background="@drawable/divider_carretera"
+            android:layout_marginBottom="20dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Modo walkie-talkie"
+            android:textColor="@color/motero_texto_tenue"
+            android:textSize="13sp"
+            android:layout_marginBottom="4dp" />
+
+        <Switch
+            android:id="@+id/switchWalkie"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Activar modo radio (como un walkie-talkie)"
+            android:textColor="@color/motero_texto"
+            android:enabled="false"
+            android:thumbTint="@color/switch_thumb_color"
+            android:trackTint="@color/switch_track_color"
+            android:layout_marginBottom="14dp" />
+
+        <Button
+            android:id="@+id/btnHablar"
+            android:layout_width="match_parent"
+            android:layout_height="86dp"
+            android:background="@drawable/bg_boton"
+            android:textColor="@color/motero_texto"
+            android:textStyle="bold"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            android:enabled="false"
+            android:layout_marginBottom="24dp"
+            android:text="🎙️ Mantén presionado para hablar" />
+
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/motero_fondo"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📡 Sala por internet"
+            android:textColor="@color/motero_acento"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Walkie-talkie por turnos: mantén presionado para hablar, suelta para enviar. Funciona con WiFi o datos móviles."
+            android:textColor="@color/motero_texto_tenue"
+            android:textSize="13sp"
+            android:layout_marginBottom="20dp"/>
+
+        <!-- ===== Panel: antes de conectar ===== -->
+        <LinearLayout
+            android:id="@+id/panelAntesDeConectar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_panel"
+            android:padding="18dp">
+
+            <EditText
+                android:id="@+id/editMiNombre"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Tu nombre"
+                android:textColorHint="@color/motero_texto_tenue"
+                android:textColor="@color/motero_texto"
+                android:inputType="textPersonName"
+                android:layout_marginBottom="18dp"/>
+
+            <Button
+                android:id="@+id/btnCrearSala"
+                style="@style/BotonMotero"
+                android:text="Crear sala nueva"
+                android:layout_marginBottom="20dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="— o —"
+                android:textColor="@color/motero_texto_tenue"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="16dp"/>
+
+            <EditText
+                android:id="@+id/editCodigoUnirse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Código de la sala (ej: A3F9K2)"
+                android:textColorHint="@color/motero_texto_tenue"
+                android:textColor="@color/motero_texto"
+                android:inputType="textCapCharacters"
+                android:layout_marginBottom="12dp"/>
+
+            <Button
+                android:id="@+id/btnUnirseSala"
+                style="@style/BotonMotero"
+                android:text="Unirse a esa sala"/>
+
+        </LinearLayout>
+
+        <!-- ===== Panel: conectado ===== -->
+        <LinearLayout
+            android:id="@+id/panelConectado"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <!-- Tarjeta con el código de la sala -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_panel"
+                android:padding="16dp"
+                android:gravity="center"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:id="@+id/txtCodigoActual"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sala: ------"
+                    android:textColor="@color/motero_acento"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Comparte este código con quien quieras que se conecte."
+                    android:textColor="@color/motero_texto_tenue"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:layout_marginBottom="14dp"/>
+
+                <ImageView
+                    android:id="@+id/imgQrSala"
+                    android:layout_width="180dp"
+                    android:layout_height="180dp"
+                    android:background="#FFFFFFFF"
+                    android:padding="8dp"
+                    android:contentDescription="Código QR de la sala"
+                    android:layout_marginBottom="14dp"/>
+
+                <Button
+                    android:id="@+id/btnCompartirCodigo"
+                    style="@style/BotonMotero"
+                    android:text="📤 Compartir código (WhatsApp y más)"/>
+
+            </LinearLayout>
+
+            <!-- Estado actual -->
+            <TextView
+                android:id="@+id/txtEstadoInternet"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Mantén presionado para hablar"
+                android:textColor="@color/motero_texto"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:padding="10dp"
+                android:layout_marginBottom="20dp"/>
+
+            <!-- Botón redondo estilo radio/walkie-talkie -->
+            <Button
+                android:id="@+id/btnHablarInternet"
+                android:layout_width="190dp"
+                android:layout_height="190dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/bg_boton_ptt_redondo"
+                android:text="🎙️&#10;MANTÉN&#10;PARA HABLAR"
+                android:textColor="@color/motero_texto"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:elevation="0dp"
+                android:layout_marginBottom="28dp"/>
+
+            <!-- Controles: altavoz y volumen -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_panel"
+                android:padding="16dp"
+                android:layout_marginBottom="20dp">
+
+                <Button
+                    android:id="@+id/btnAltavozInternet"
+                    style="@style/BotonMotero"
+                    android:background="@drawable/bg_boton_apagado"
+                    android:text="Altavoz: apagado"
+                    android:layout_marginBottom="16dp"/>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Volumen"
+                    android:textColor="@color/motero_texto_tenue"
+                    android:textSize="13sp"
+                    android:layout_marginBottom="4dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔈"
+                        android:textSize="18sp"/>
+
+                    <SeekBar
+                        android:id="@+id/seekVolumenInternet"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:max="100"
+                        android:progress="70"
+                        android:progressTint="@color/motero_acento"
+                        android:thumbTint="@color/motero_acento"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔊"
+                        android:textSize="18sp"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnSalirSala"
+                style="@style/BotonMoteroAlerta"
+                android:text="Salir de la sala"/>
+
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>
