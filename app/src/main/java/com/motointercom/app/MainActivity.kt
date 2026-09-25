@@ -188,6 +188,9 @@ class MainActivity : AppCompatActivity(), IntercomService.Escucha {
         btnHablar.setOnTouchListener { boton, evento ->
             when (evento.action) {
                 android.view.MotionEvent.ACTION_DOWN -> {
+                    // Evita que la pantalla interprete un pequeño temblor de
+                    // la mano como "deslizar" y te suelte el botón sin querer.
+                    boton.parent?.requestDisallowInterceptTouchEvent(true)
                     pendienteDetenerBluetooth?.let { manejador.removeCallbacks(it) }
                     pendienteDetenerBluetooth = null
                     servicio?.establecerSilencio(false)
@@ -197,6 +200,7 @@ class MainActivity : AppCompatActivity(), IntercomService.Escucha {
                     true
                 }
                 android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                    boton.parent?.requestDisallowInterceptTouchEvent(false)
                     // Espera 1 segundo antes de silenciar de verdad, por si el
                     // toque se soltó sin querer (vibración de la moto, etc.).
                     btnHablar.text = "🎙️ Mantén presionado para hablar"
