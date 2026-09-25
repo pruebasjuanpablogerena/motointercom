@@ -166,6 +166,12 @@ class SalaInternetActivity : AppCompatActivity(), SalaInternetService.Escucha {
         btnHablarInternet.setOnTouchListener { boton, evento ->
             when (evento.action) {
                 MotionEvent.ACTION_DOWN -> {
+                    // Le dice a la pantalla que NO interprete el movimiento del
+                    // dedo como "deslizar la pantalla" mientras se mantiene
+                    // presionado este botón — así un pequeño temblor de la
+                    // mano (normal andando en moto) ya no te suelta el botón.
+                    boton.parent?.requestDisallowInterceptTouchEvent(true)
+
                     // Si soltaste hace menos de 1 segundo y volviste a tocar,
                     // se cancela el corte pendiente y sigues grabando lo mismo
                     // (no se corta ni se reinicia la grabación).
@@ -179,6 +185,8 @@ class SalaInternetActivity : AppCompatActivity(), SalaInternetService.Escucha {
                     true
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    boton.parent?.requestDisallowInterceptTouchEvent(false)
+
                     // No se corta de inmediato: se espera 1 segundo por si fue
                     // un toque accidental (el dedo resbaló por la vibración de
                     // la moto, por ejemplo). Si no vuelves a tocar en ese
@@ -191,6 +199,12 @@ class SalaInternetActivity : AppCompatActivity(), SalaInternetService.Escucha {
                     }
                     pendienteDetener = corte
                     manejador.postDelayed(corte, 1000)
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    // Mientras el dedo se mueva DENTRO del botón (o cerca),
+                    // seguimos igual — no se hace nada especial aquí, el
+                    // requestDisallowInterceptTouchEvent ya evita el problema.
                     true
                 }
                 else -> false
