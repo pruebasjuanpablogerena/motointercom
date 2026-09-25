@@ -1,0 +1,64 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.google.gms.google-services'
+}
+
+android {
+    namespace 'com.motointercom.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.motointercom.app"
+        minSdk 26
+        targetSdk 34
+        versionCode 2
+        versionName "1.1"
+    }
+
+    // Huella (firma) FIJA del proyecto. Antes, cada vez que se recreaba el
+    // repositorio, GitHub generaba una firma nueva al azar, y por eso tocaba
+    // desinstalar la app antes de instalar la nueva versión. Con esta huella
+    // fija, mientras no se borre este archivo .keystore, todas las próximas
+    // actualizaciones se instalan ENCIMA de la anterior, sin desinstalar nada.
+    signingConfigs {
+        fija {
+            storeFile file("../motointercom.keystore")
+            storePassword "motointercom2026"
+            keyAlias "motointercom"
+            keyPassword "motointercom2026"
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.fija
+        }
+        release {
+            signingConfig signingConfigs.fija
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+
+    // Sala por internet (walkie-talkie): mensajes de voz cortos vía Firebase.
+    // El audio va como texto (Base64) dentro de la Realtime Database, así que
+    // no hace falta Firebase Storage (que exige el plan de pago Blaze).
+    implementation platform('com.google.firebase:firebase-bom:33.1.2')
+    implementation 'com.google.firebase:firebase-database-ktx'
+
+    // Generar el código QR de la sala directamente en el celular, sin internet.
+    implementation 'com.google.zxing:core:3.5.3'
+}

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MotoIntercom — Intercomunicador para moteros</title>
+<meta name="description" content="Conecta dos celulares Android por Bluetooth y habla con tu acompañante en moto, sin perder el GPS ni la música.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asphalt: #17181b;
+    --asphalt-2: #1f2124;
+    --line: #29B6FF;
+    --line-dim: #0D84C4;
+    --paper: #eeeee6;
+    --paper-dim: #a7a89e;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--asphalt);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    line-height:1.55;
+  }
+  h1,h2,.headline-font{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.01em;
+    line-height:1.05;
+    margin:0;
+  }
+  a{color:var(--line);}
+  .wrap{
+    max-width:760px;
+    margin:0 auto;
+    padding:0 24px;
+  }
+  .hero{
+    padding:96px 0 72px;
+    border-bottom:1px dashed #3a3d42;
+    position:relative;
+  }
+  .hero::before{
+    content:"";
+    position:absolute;
+    top:0; left:0; right:0; height:6px;
+    background:repeating-linear-gradient(90deg, var(--line) 0 28px, transparent 28px 52px);
+    opacity:0.85;
+  }
+  .hero h1{
+    font-size:clamp(2.2rem, 6vw, 3.4rem);
+    color:var(--paper);
+    max-width:11ch;
+  }
+  .hero h1 em{
+    font-style:normal;
+    color:var(--line);
+  }
+  .hero p{
+    max-width:44ch;
+    color:var(--paper-dim);
+    font-size:1.08rem;
+    margin-top:20px;
+  }
+  .cta{
+    display:inline-block;
+    margin-top:32px;
+    background:var(--line);
+    color:#111;
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    font-weight:600;
+    letter-spacing:0.02em;
+    text-decoration:none;
+    padding:16px 30px;
+    font-size:1rem;
+  }
+  .cta:hover{background:var(--line-dim);}
+  .cta-note{
+    display:block;
+    margin-top:12px;
+    font-size:0.85rem;
+    color:var(--paper-dim);
+  }
+  section{
+    padding:56px 0;
+    border-bottom:1px dashed #3a3d42;
+  }
+  section:last-of-type{border-bottom:none;}
+  section h2{
+    font-size:1.5rem;
+    color:var(--line);
+    margin-bottom:28px;
+  }
+  .feature{
+    display:grid;
+    grid-template-columns:28px 1fr;
+    gap:16px;
+    padding:18px 0;
+    border-top:1px solid var(--asphalt-2);
+  }
+  .feature:first-of-type{border-top:none;}
+  .feature svg{margin-top:4px;}
+  .feature h3{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:1.05rem;
+    color:var(--paper);
+    margin:0 0 4px;
+  }
+  .feature p{margin:0; color:var(--paper-dim); font-size:0.96rem;}
+  .steps{counter-reset:step;}
+  .step{
+    display:grid;
+    grid-template-columns:40px 1fr;
+    gap:16px;
+    padding:16px 0;
+  }
+  .step::before{
+    counter-increment:step;
+    content:counter(step);
+    font-family:'Oswald',sans-serif;
+    font-size:1.3rem;
+    color:var(--line);
+  }
+  .step p{margin:0; color:var(--paper-dim);}
+  .step strong{color:var(--paper);}
+  footer{
+    padding:40px 0 60px;
+    color:var(--paper-dim);
+    font-size:0.85rem;
+  }
+  footer a{color:var(--paper-dim); text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<div id="bannerSala" style="display:none; background:var(--line); color:#111; padding:16px; text-align:center; font-weight:600;">
+  <span id="textoBannerSala">Abriendo MotoIntercom…</span>
+</div>
+
+<div class="hero">
+  <div class="wrap">
+    <h1>Manos en el manubrio.<br><em>Voz en el casco.</em></h1>
+    <p>MotoIntercom conecta el celular del conductor y del pasajero por Bluetooth. Hablan entre ustedes en todo momento, y el GPS o la música bajan de volumen solos mientras conversan.</p>
+
+    <!--
+      Este link SIEMPRE apunta a la última versión publicada por GitHub Actions.
+      Reemplaza únicamente TU-USUARIO y TU-REPOSITORIO, no toques el resto.
+    -->
+    <a class="cta" href="https://github.com/pruebasjuanpablogerena/motointercom/releases/latest/download/app-debug.apk" download>Descargar APK</a>
+    <span class="cta-note">Android 8.0 o superior · instalación fuera de Play Store · se actualiza sola con cada versión</span>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <h2>Qué hace</h2>
+    <div class="feature">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#29B6FF" stroke-width="1.6"/><path d="M8 12a4 4 0 0 1 8 0" stroke="#29B6FF" stroke-width="1.6"/></svg>
+      <div><h3>Intercomunicador directo</h3><p>Bluetooth entre los dos teléfonos, sin necesidad de internet ni datos móviles.</p></div>
+    </div>
+    <div class="feature">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 3v13M6 11l6 6 6-6" stroke="#29B6FF" stroke-width="1.6"/></svg>
+      <div><h3>El GPS y la música no se cortan</h3><p>Waze, Google Maps o tu música siguen sonando, solo bajan el volumen mientras hablan.</p></div>
+    </div>
+    <div class="feature">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="5" y="4" width="14" height="16" rx="2" stroke="#29B6FF" stroke-width="1.6"/></svg>
+      <div><h3>Sin equipo extra</h3><p>Solo los dos celulares Android, ya emparejados por Bluetooth desde los ajustes del sistema.</p></div>
+    </div>
+    <div class="feature">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="9" width="16" height="6" rx="3" stroke="#29B6FF" stroke-width="1.6"/><circle cx="15" cy="12" r="2.4" fill="#29B6FF"/></svg>
+      <div><h3>Compartir música, opcional</h3><p>Un interruptor deja que un celular transmita también su propia música o GPS al otro casco. El otro sigue escuchando la suya, o simplemente no lo activa.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Cómo se usa</h2>
+    <div class="steps">
+      <div class="step"><p><strong>Emparejen los dos celulares</strong> por Bluetooth, como lo harían normalmente en Ajustes.</p></div>
+      <div class="step"><p><strong>Abran la app</strong> en ambos: uno elige "Conductor", el otro "Pasajero".</p></div>
+      <div class="step"><p><strong>Confirmen la conexión</strong> desde el celular del pasajero, eligiendo el dispositivo emparejado.</p></div>
+      <div class="step"><p><strong>Salgan a rodar.</strong> Se escuchan entre ustedes, y el GPS o la música suenan de fondo.</p></div>
+      <div class="step"><p><strong>Opcional:</strong> activa el interruptor "Compartir mi música/GPS" en un celular si quieres que el otro también escuche esa música o esas indicaciones.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Proyecto personal, sin garantías. Código fuente disponible en este mismo repositorio de GitHub.
+  </div>
+</footer>
+
+<script>
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var sala = params.get('sala');
+  if (!sala) return;
+
+  var banner = document.getElementById('bannerSala');
+  var texto = document.getElementById('textoBannerSala');
+  banner.style.display = 'block';
+  texto.textContent = 'Abriendo MotoIntercom en la sala ' + sala + '...';
+
+  // Si ya tienen la app instalada, esto la abre directo en esa sala.
+  window.location.href = 'motointercom://sala/' + encodeURIComponent(sala);
+
+  // Si después de un momento seguimos en esta página, es que no la tienen
+  // instalada: se les avisa y se resalta el botón de descarga.
+  setTimeout(function(){
+    texto.textContent = '¿No se abrió la app? Descárgala abajo y vuelve a escanear este código.';
+    var cta = document.querySelector('.cta');
+    if (cta) {
+      cta.scrollIntoView({behavior:'smooth', block:'center'});
+      cta.style.outline = '3px solid var(--line)';
+      cta.style.outlineOffset = '4px';
+    }
+  }, 1500);
+})();
+</script>
+
+</body>
+</html>
