@@ -151,6 +151,8 @@
       Reemplaza únicamente TU-USUARIO y TU-REPOSITORIO, no toques el resto.
     -->
     <a class="cta" href="https://github.com/pruebasjuanpablogerena/motointercom/releases/latest/download/app-debug.apk" download>Descargar APK</a>
+    <br><br>
+    <a href="sala-web/" style="color: var(--line); font-size: 14px;">¿Tienes iPhone? Únete a una sala por internet desde aquí, sin instalar nada →</a>
     <span class="cta-note">Android 8.0 o superior · instalación fuera de Play Store · se actualiza sola con cada versión</span>
   </div>
 </div>
@@ -205,15 +207,29 @@
   var banner = document.getElementById('bannerSala');
   var texto = document.getElementById('textoBannerSala');
   banner.style.display = 'block';
+
+  // iPhone/iPad no pueden instalar el APK de Android, así que a ellos se les
+  // manda directo a la versión web de la sala (funciona igual, sin instalar
+  // nada).
+  var esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (esIOS) {
+    texto.textContent = 'Abriendo la sala en tu navegador...';
+    window.location.href = 'sala-web/?sala=' + encodeURIComponent(sala);
+    return;
+  }
+
   texto.textContent = 'Abriendo MotoIntercom en la sala ' + sala + '...';
 
   // Si ya tienen la app instalada, esto la abre directo en esa sala.
   window.location.href = 'motointercom://sala/' + encodeURIComponent(sala);
 
   // Si después de un momento seguimos en esta página, es que no la tienen
-  // instalada: se les avisa y se resalta el botón de descarga.
+  // instalada: se les avisa y se resalta el botón de descarga (o pueden
+  // entrar por la versión web si no quieren instalar nada).
   setTimeout(function(){
-    texto.textContent = '¿No se abrió la app? Descárgala abajo y vuelve a escanear este código.';
+    texto.textContent = '¿No se abrió la app? Descárgala abajo, o entra sin instalar nada desde la versión web.';
     var cta = document.querySelector('.cta');
     if (cta) {
       cta.scrollIntoView({behavior:'smooth', block:'center'});
