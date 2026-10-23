@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MotoIntercom · Sala por Internet</title>
+<style>
+  :root {
+    --fondo: #0D0E10;
+    --panel: #1C1F24;
+    --acento: #29B6FF;
+    --acento-oscuro: #0D84C4;
+    --alerta: #FF3B30;
+    --on: #3DDC84;
+    --texto: #EEEEE6;
+    --texto-tenue: #9A9DA6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--fondo);
+    color: var(--texto);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+    padding-top: calc(24px + env(safe-area-inset-top, 0px));
+  }
+  .envoltura { max-width: 480px; margin: 0 auto; }
+  h1 {
+    color: var(--acento);
+    font-size: 22px;
+    margin-bottom: 4px;
+  }
+  p.sub {
+    color: var(--texto-tenue);
+    font-size: 13px;
+    margin-top: 0;
+    margin-bottom: 24px;
+  }
+  .panel {
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--texto-tenue);
+    color: var(--texto);
+    font-size: 16px;
+    padding: 10px 2px;
+    margin-bottom: 18px;
+    outline: none;
+  }
+  input::placeholder { color: var(--texto-tenue); }
+  button.boton {
+    width: 100%;
+    background: var(--panel);
+    border: 2px solid var(--acento);
+    color: var(--texto);
+    font-weight: bold;
+    font-size: 15px;
+    padding: 14px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+  button.boton:active { background: var(--acento-oscuro); }
+  button.alerta { border-color: var(--alerta); }
+  button.alerta:active { background: #5C231F; }
+  .separador {
+    text-align: center;
+    color: var(--texto-tenue);
+    margin: 14px 0;
+    font-size: 13px;
+  }
+  #panelConectado { display: none; }
+  .codigo {
+    text-align: center;
+  }
+  .codigo h2 {
+    color: var(--acento);
+    font-size: 24px;
+    margin: 0 0 4px 0;
+  }
+  .codigo p {
+    color: var(--texto-tenue);
+    font-size: 12px;
+    margin: 0;
+  }
+  #estado {
+    text-align: center;
+    padding: 10px;
+    font-size: 14px;
+  }
+  #participantes {
+    text-align: center;
+    padding: 6px;
+    font-size: 12px;
+    color: var(--texto-tenue);
+  }
+  #btnHablar {
+    width: 190px;
+    height: 190px;
+    border-radius: 50%;
+    display: block;
+    margin: 20px auto;
+    background: var(--panel);
+    border: 5px solid var(--acento);
+    color: var(--texto);
+    font-weight: bold;
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.4;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+  #btnHablar.hablando {
+    background: var(--acento-oscuro);
+    border-color: var(--on);
+    transform: scale(1.06);
+  }
+  #btnHablar:disabled {
+    opacity: 0.4;
+    border-color: #666;
+  }
+  .aviso-permiso {
+    font-size: 12px;
+    color: var(--texto-tenue);
+    text-align: center;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="envoltura">
+  <h1>📡 Sala por Internet</h1>
+  <p class="sub">Versión web de MotoIntercom — para celulares que no pueden instalar la app (iPhone, etc.). Mantén presionado para hablar, suelta para enviar.</p>
+
+  <div class="panel" id="panelEntrada">
+    <input id="editNombre" placeholder="Tu nombre" maxlength="24">
+    <button class="boton" id="btnCrear">Crear sala nueva</button>
+    <div class="separador">— o —</div>
+    <input id="editCodigo" placeholder="Código de la sala (ej: A3F9K2)" maxlength="8" style="text-transform:uppercase">
+    <button class="boton" id="btnUnirse">Unirse a esa sala</button>
+  </div>
+
+  <div id="panelConectado">
+    <div class="panel codigo">
+      <h2 id="txtCodigo">Sala: ------</h2>
+      <p>Comparte este código con quien quieras que se conecte.</p>
+    </div>
+
+    <div class="panel" style="padding:4px 0;">
+      <div id="estado">Mantén presionado para hablar</div>
+      <div id="participantes">👥 No hay nadie más en la sala todavía</div>
+    </div>
+
+    <button id="btnHablar">🎙️<br>MANTÉN<br>PARA HABLAR</button>
+    <p class="aviso-permiso" id="avisoPermiso"></p>
+
+    <button class="boton alerta" id="btnSalir">Salir de la sala</button>
+  </div>
+</div>
+
+<!-- Firebase (solo Realtime Database, sin necesitar cuenta ni inicio de sesión) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+(function () {
+  "use strict";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDWBJAGvj-mrBjfD9Ev4w6-DRukeTcgUCE",
+    databaseURL: "https://motointercom-1235a-default-rtdb.firebaseio.com/",
+    projectId: "motointercom-1235a"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  // ---------- Elementos ----------
+  const panelEntrada = document.getElementById('panelEntrada');
+  const panelConectado = document.getElementById('panelConectado');
+  const editNombre = document.getElementById('editNombre');
+  const editCodigo = document.getElementById('editCodigo');
+  const btnCrear = document.getElementById('btnCrear');
+  const btnUnirse = document.getElementById('btnUnirse');
+  const txtCodigo = document.getElementById('txtCodigo');
+  const estado = document.getElementById('estado');
+  const participantesDiv = document.getElementById('participantes');
+  const btnHablar = document.getElementById('btnHablar');
+  const btnSalir = document.getElementById('btnSalir');
+  const avisoPermiso = document.getElementById('avisoPermiso');
+
+  // ---------- Identidad (se guarda en este navegador) ----------
+  let miId = localStorage.getItem('moto_intercom_id');
+  if (!miId) {
+    miId = 'web-' + Math.random().toString(36).slice(2) + Date.now();
+    localStorage.setItem('moto_intercom_id', miId);
+  }
+  editNombre.value = localStorage.getItem('moto_intercom_nombre') || 'Motero';
+
+  // ---------- Estado de la sala ----------
+  let codigoSala = null;
+  let horaDeEntrada = 0;
+  let refMensajes = null, refParticipantes = null, refMiParticipante = null;
+  const participantes = {};
+  const colaReproduccion = [];
+  let reproduciendoAhora = false;
+
+  // ---------- Grabación ----------
+  let mediaRecorder = null;
+  let trozos = [];
+  let grabando = false;
+  let streamMicrofono = null;
+  let pendienteDetener = null;
+  let cronometroInterval = null;
+  let horaInicioGrabacion = 0;
+  const DURACION_MAXIMA_MS = 20000;
+  let corteAutomaticoTimeout = null;
+
+  function generarCodigo() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let codigo = "";
+    for (let i = 0; i < 6; i++) codigo += chars[Math.floor(Math.random() * chars.length)];
+    return codigo;
+  }
+
+  function guardarNombre() {
+    const nombre = (editNombre.value || "").trim() || "Motero";
+    localStorage.setItem('moto_intercom_nombre', nombre);
+    return nombre;
+  }
+
+  btnCrear.onclick = function () {
+    const nombre = guardarNombre();
+    const codigo = generarCodigo();
+    db.ref('salas/' + codigo + '/creada').set(firebase.database.ServerValue.TIMESTAMP);
+    entrarASala(codigo, nombre);
+  };
+
+  btnUnirse.onclick = function () {
+    const nombre = guardarNombre();
+    const codigo = (editCodigo.value || "").trim().toUpperCase();
+    if (codigo.length < 4) { alert("Escribe el código completo"); return; }
+    entrarASala(codigo, nombre);
+  };
+
+  btnSalir.onclick = function () { salirDeSala(); };
+
+  function entrarASala(codigo, nombre) {
+    codigoSala = codigo;
+    horaDeEntrada = Date.now();
+    txtCodigo.textContent = "Sala: " + codigo;
+    estado.textContent = "Conectado como " + nombre + ". Mantén presionado para hablar.";
+    participantesDiv.textContent = "👥 No hay nadie más en la sala todavía";
+    panelEntrada.style.display = 'none';
+    panelConectado.style.display = 'block';
+
+    // --- Mensajes ---
+    refMensajes = db.ref('salas/' + codigo + '/mensajes');
+    refMensajes.on('child_added', function (snap) {
+      const m = snap.val();
+      if (!m || m.remitenteId === miId) return;
+      if (m.timestamp && m.timestamp < horaDeEntrada) return;
+      estado.textContent = (m.remitenteNombre || "Alguien") + " está hablando...";
+      colaReproduccion.push(m.audioBase64);
+      reproducirSiguienteSiLibre();
+    });
+
+    // Borra mensajes de más de 24 horas (lo mismo que hace la app de Android).
+    const limite = Date.now() - 24 * 60 * 60 * 1000;
+    refMensajes.orderByChild('timestamp').endAt(limite).once('value', function (snap) {
+      snap.forEach(function (hijo) { hijo.ref.remove(); });
+    });
+
+    // --- Presencia (quién está, avisos de entrada/salida) ---
+    refParticipantes = db.ref('salas/' + codigo + '/participantes');
+    refMiParticipante = refParticipantes.child(miId);
+    refMiParticipante.set({ nombre: nombre, desde: firebase.database.ServerValue.TIMESTAMP });
+    refMiParticipante.onDisconnect().remove();
+
+    refParticipantes.on('child_added', function (snap) {
+      const id = snap.key;
+      const nombreP = (snap.val() && snap.val().nombre) || "Alguien";
+      const yaEstaba = Object.prototype.hasOwnProperty.call(participantes, id);
+      participantes[id] = nombreP;
+      actualizarListaParticipantes();
+      if (!yaEstaba && id !== miId) {
+        avisarEntradaSalida(nombreP + " se unió a la sala");
+      }
+    });
+    refParticipantes.on('child_removed', function (snap) {
+      const id = snap.key;
+      const nombreP = participantes[id] || "Alguien";
+      delete participantes[id];
+      actualizarListaParticipantes();
+      if (id !== miId) {
+        avisarEntradaSalida(nombreP + " salió de la sala");
+      }
+    });
+
+    prepararMicrofono();
+  }
+
+  function salirDeSala() {
+    if (refMensajes) refMensajes.off();
+    if (refParticipantes) refParticipantes.off();
+    if (refMiParticipante) refMiParticipante.remove();
+    refMensajes = null; refParticipantes = null; refMiParticipante = null;
+    for (const k in participantes) delete participantes[k];
+    colaReproduccion.length = 0;
+    codigoSala = null;
+    if (streamMicrofono) {
+      streamMicrofono.getTracks().forEach(function (t) { t.stop(); });
+      streamMicrofono = null;
+    }
+    panelEntrada.style.display = 'block';
+    panelConectado.style.display = 'none';
+  }
+
+  function actualizarListaParticipantes() {
+    const nombres = Object.values(participantes);
+    participantesDiv.textContent = nombres.length === 0
+      ? "👥 No hay nadie más en la sala todavía"
+      : "👥 En la sala (" + nombres.length + "): " + nombres.join(", ");
+  }
+
+  let avisoTimeout = null;
+  function avisarEntradaSalida(texto) {
+    estado.textContent = texto;
+    try {
+      // Pitido suave con el propio navegador, sin necesitar ningún archivo de sonido.
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = 880;
+      gain.gain.value = 0.05;
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start();
+      setTimeout(function () { osc.stop(); ctx.close(); }, 150);
+    } catch (e) {}
+    clearTimeout(avisoTimeout);
+    avisoTimeout = setTimeout(function () {
+      if (estado.textContent === texto) estado.textContent = "Mantén presionado para hablar";
+    }, 3000);
+  }
+
+  // ---------- Reproducir mensajes recibidos ----------
+  function reproducirSiguienteSiLibre() {
+    if (reproduciendoAhora) return;
+    const siguiente = colaReproduccion.shift();
+    if (!siguiente) return;
+    reproduciendoAhora = true;
+    const audio = new Audio("data:audio/mp4;base64," + siguiente);
+    audio.onended = audio.onerror = function () {
+      reproduciendoAhora = false;
+      if (colaReproduccion.length === 0) estado.textContent = "Mantén presionado para hablar";
+      reproducirSiguienteSiLibre();
+    };
+    audio.play().catch(function () {
+      reproduciendoAhora = false;
+      reproducirSiguienteSiLibre();
+    });
+  }
+
+  // ---------- Grabar y enviar ----------
+  function tipoSoportado() {
+    const candidatos = ['audio/mp4', 'audio/aac', 'audio/webm'];
+    for (const c of candidatos) {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(c)) return c;
+    }
+    return '';
+  }
+
+  function prepararMicrofono() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      avisoPermiso.textContent = "Este navegador no permite grabar audio. Prueba con Safari o Chrome actualizados.";
+      btnHablar.disabled = true;
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      streamMicrofono = stream;
+      avisoPermiso.textContent = "";
+    }).catch(function () {
+      avisoPermiso.textContent = "Necesitas darle permiso de micrófono a esta página para poder hablar.";
+      btnHablar.disabled = true;
+    });
+  }
+
+  function iniciarGrabacion() {
+    if (grabando || !streamMicrofono) return;
+    const tipo = tipoSoportado();
+    try {
+      mediaRecorder = new MediaRecorder(streamMicrofono, tipo ? { mimeType: tipo } : undefined);
+    } catch (e) {
+      avisoPermiso.textContent = "No se pudo grabar en este navegador.";
+      return;
+    }
+    trozos = [];
+    mediaRecorder.ondataavailable = function (e) { if (e.data && e.data.size > 0) trozos.push(e.data); };
+    mediaRecorder.onstop = subirGrabacion;
+    mediaRecorder.start();
+    grabando = true;
+    horaInicioGrabacion = Date.now();
+    btnHablar.classList.add('hablando');
+    btnHablar.innerHTML = "🔴 0:00";
+    cronometroInterval = setInterval(function () {
+      const s = Math.floor((Date.now() - horaInicioGrabacion) / 1000);
+      const mm = Math.floor(s / 60), ss = s % 60;
+      btnHablar.innerHTML = "🔴 " + mm + ":" + (ss < 10 ? "0" : "") + ss;
+    }, 200);
+    estado.textContent = "Hablando en sala " + codigoSala;
+    corteAutomaticoTimeout = setTimeout(detenerYEnviarGrabacionYa, DURACION_MAXIMA_MS);
+  }
+
+  function detenerYEnviarGrabacionYa() {
+    if (!grabando) return;
+    grabando = false;
+    clearInterval(cronometroInterval);
+    clearTimeout(corteAutomaticoTimeout);
+    btnHablar.classList.remove('hablando');
+    btnHablar.innerHTML = "🎙️<br>MANTÉN<br>PARA HABLAR";
+    try { mediaRecorder.stop(); } catch (e) {}
+  }
+
+  function subirGrabacion() {
+    if (trozos.length === 0) return;
+    const blob = new Blob(trozos, { type: mediaRecorder.mimeType || 'audio/mp4' });
+    if (blob.size < 500) return; // grabación demasiado corta / toque accidental
+
+    estado.textContent = "Enviando...";
+    const lector = new FileReader();
+    lector.onloadend = function () {
+      const base64 = lector.result.split(',')[1];
+      const nombre = guardarNombre();
+      db.ref('salas/' + codigoSala + '/mensajes').push({
+        remitenteId: miId,
+        remitenteNombre: nombre,
+        audioBase64: base64,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      }).then(function () {
+        estado.textContent = "Mantén presionado para hablar";
+      }).catch(function () {
+        estado.textContent = "No se pudo enviar: revisa tu conexión";
+      });
+    };
+    lector.readAsDataURL(blob);
+  }
+
+  function alPresionar(e) {
+    e.preventDefault();
+    if (pendienteDetener) { clearTimeout(pendienteDetener); pendienteDetener = null; }
+    if (!grabando) iniciarGrabacion();
+  }
+  function alSoltar(e) {
+    e.preventDefault();
+    btnHablar.classList.remove('hablando');
+    // Espera 1 segundo por si fue un toque accidental, igual que la app.
+    pendienteDetener = setTimeout(function () {
+      pendienteDetener = null;
+      detenerYEnviarGrabacionYa();
+    }, 1000);
+  }
+
+  btnHablar.addEventListener('mousedown', alPresionar);
+  btnHablar.addEventListener('touchstart', alPresionar, { passive: false });
+  btnHablar.addEventListener('mouseup', alSoltar);
+  btnHablar.addEventListener('mouseleave', alSoltar);
+  btnHablar.addEventListener('touchend', alSoltar, { passive: false });
+  btnHablar.addEventListener('touchcancel', alSoltar, { passive: false });
+
+  // ---------- Si llega con ?sala=CODIGO (desde el QR o un enlace compartido) ----------
+  const parametros = new URLSearchParams(window.location.search);
+  const salaDesdeEnlace = parametros.get('sala');
+  if (salaDesdeEnlace) {
+    editCodigo.value = salaDesdeEnlace.toUpperCase();
+  }
+})();
+</script>
+
+</body>
+</html>

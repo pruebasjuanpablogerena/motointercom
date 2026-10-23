@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/motero_fondo">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📻 Radio Online"
+        android:textColor="@color/motero_acento"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:padding="18dp" />
+
+    <EditText
+        android:id="@+id/txtBuscar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:hint="Buscar emisora..."
+        android:textColorHint="@color/motero_texto_tenue"
+        android:textColor="@color/motero_texto"
+        android:background="@drawable/bg_panel"
+        android:padding="12dp"
+        android:inputType="text"
+        android:layout_marginBottom="8dp" />
+
+    <Spinner
+        android:id="@+id/spinnerDepartamento"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:background="@drawable/bg_panel"
+        android:padding="8dp"
+        android:layout_marginBottom="10dp" />
+
+    <ListView
+        android:id="@+id/listaEmisoras"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingHorizontal="12dp"
+        android:divider="@null"
+        android:dividerHeight="6dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_panel"
+        android:padding="16dp"
+        android:layout_margin="16dp">
+
+        <TextView
+            android:id="@+id/txtReproduciendo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Selecciona una emisora"
+            android:textColor="@color/motero_texto"
+            android:textStyle="bold"
+            android:layout_marginBottom="10dp" />
+
+        <Button
+            android:id="@+id/btnDetenerRadio"
+            style="@style/BotonMoteroAlerta"
+            android:text="Detener"
+            android:enabled="false"
+            android:layout_marginBottom="10dp" />
+
+        <Switch
+            android:id="@+id/switchCompartirRadio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Compartir esta radio con el pasajero"
+            android:textColor="@color/motero_texto"
+            android:thumbTint="@color/switch_thumb_color"
+            android:trackTint="@color/switch_track_color" />
+
+    </LinearLayout>
+
+</LinearLayout>
