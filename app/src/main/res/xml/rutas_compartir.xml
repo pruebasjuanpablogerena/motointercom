@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Carpetas desde las que la app puede compartir archivos con otras apps
+     (por ejemplo, la imagen del QR de la sala para enviarla por WhatsApp). -->
+<paths>
+    <cache-path name="compartir" path="compartir/" />
+</paths>

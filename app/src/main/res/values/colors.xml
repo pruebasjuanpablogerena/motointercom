@@ -1,0 +1,17 @@
+<resources>
+    <color name="motero_fondo">#0D0E10</color>
+    <color name="motero_panel">#1C1F24</color>
+    <color name="motero_acento">#29B6FF</color>
+    <color name="motero_acento_oscuro">#0D84C4</color>
+    <color name="motero_alerta">#FF5A36</color>
+    <color name="motero_texto">#EEEEE6</color>
+    <color name="motero_texto_tenue">#9A9DA6</color>
+
+    <!-- Estado encendido/apagado, usado en interruptores y botones on/off -->
+    <color name="motero_on">#3DDC84</color>
+    <color name="motero_on_oscuro">#1F8C50</color>
+    <color name="motero_on_track">#1F5C3C</color>
+    <color name="motero_off">#FF3B30</color>
+    <color name="motero_off_oscuro">#A82A22</color>
+    <color name="motero_off_track">#5C231F</color>
+</resources>
