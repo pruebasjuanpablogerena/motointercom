@@ -46,6 +46,10 @@ class RadioActivity : AppCompatActivity() {
     private var todasLasEmisoras: List<Emisora> = emptyList()
     private var emisorasFiltradas: List<Emisora> = emptyList()
     private var adaptador: AdaptadorEmisoras? = null
+    private lateinit var txtContadorEmisoras: TextView
+
+    // Emisoras marcadas con la estrella (se guardan en el celular).
+    private val favoritas = mutableSetOf<String>()
 
     private var reproduciendoPorAvisoDelOtro = false
 
@@ -56,6 +60,10 @@ class RadioActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_SOLO_ESCUCHAR = "solo_escuchar"
+
+        private const val TODOS_LOS_DEPARTAMENTOS = "Todos los departamentos"
+        private const val MIS_FAVORITAS = "⭐ Mis favoritas"
+        private const val PREFS_RADIO = "moto_intercom_radio"
 
         // Marca para avisar por Bluetooth que el link es de un servidor con token:
         // así el otro celular pide SU propio link (el token del momento se vence).
@@ -84,6 +92,8 @@ class RadioActivity : AppCompatActivity() {
         setContentView(R.layout.activity_radio)
 
         txtBuscar = findViewById(R.id.txtBuscar)
+        txtContadorEmisoras = findViewById(R.id.txtContadorEmisoras)
+        cargarFavoritas()
         spinnerDepartamento = findViewById(R.id.spinnerDepartamento)
         listaEmisoras = findViewById(R.id.listaEmisoras)
         txtReproduciendo = findViewById(R.id.txtReproduciendo)
@@ -204,7 +214,7 @@ class RadioActivity : AppCompatActivity() {
     }
 
     private fun prepararSpinnerDepartamentos() {
-        val departamentos = mutableListOf("Todos los departamentos")
+        val departamentos = mutableListOf(TODOS_LOS_DEPARTAMENTOS, MIS_FAVORITAS)
         departamentos.addAll(todasLasEmisoras.map { it.departamento }.distinct().sorted())
         val adaptadorSpinner = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, departamentos)
         spinnerDepartamento.adapter = adaptadorSpinner
@@ -218,10 +228,14 @@ class RadioActivity : AppCompatActivity() {
 
     private fun aplicarFiltros() {
         val texto = txtBuscar.text.toString().trim().lowercase()
-        val departamentoElegido = (spinnerDepartamento.selectedItem as? String) ?: "Todos los departamentos"
+        val departamentoElegido = (spinnerDepartamento.selectedItem as? String) ?: TODOS_LOS_DEPARTAMENTOS
 
         emisorasFiltradas = todasLasEmisoras.filter { emisora ->
-            val coincideDepartamento = departamentoElegido == "Todos los departamentos" || emisora.departamento == departamentoElegido
+            val coincideDepartamento = when (departamentoElegido) {
+                TODOS_LOS_DEPARTAMENTOS -> true
+                MIS_FAVORITAS -> esFavorita(emisora)
+                else -> emisora.departamento == departamentoElegido
+            }
             val coincideTexto = texto.isEmpty() ||
                 emisora.nombre.lowercase().contains(texto) ||
                 emisora.info.lowercase().contains(texto)
@@ -234,6 +248,64 @@ class RadioActivity : AppCompatActivity() {
         } else {
             adaptador?.notifyDataSetChanged()
         }
+        actualizarContador(texto, departamentoElegido)
+    }
+
+    /** Muestra cuántas emisoras salen con la búsqueda y el departamento elegidos. */
+    private fun actualizarContador(texto: String, departamento: String) {
+        if (todasLasEmisoras.isEmpty()) {
+            txtContadorEmisoras.text = "Cargando emisoras..."
+            return
+        }
+        val cantidad = emisorasFiltradas.size
+        if (departamento == MIS_FAVORITAS && favoritas.isEmpty()) {
+            txtContadorEmisoras.text = "Aún no tienes favoritas: toca la ☆ de una emisora para agregarla."
+            return
+        }
+        val numero = String.format(java.util.Locale("es", "CO"), "%,d", cantidad)
+        val palabra = if (cantidad == 1) "emisora" else "emisoras"
+        val donde = when (departamento) {
+            TODOS_LOS_DEPARTAMENTOS -> ""
+            MIS_FAVORITAS -> " en tus favoritas"
+            else -> " en $departamento"
+        }
+        val busqueda = if (texto.isNotEmpty()) " con \"${txtBuscar.text.toString().trim()}\"" else ""
+        txtContadorEmisoras.text = "📻 $numero $palabra$busqueda$donde"
+    }
+
+    // ---------- Favoritas ----------
+
+    /** Una emisora se reconoce por su nombre y su link (hay nombres repetidos en varias ciudades). */
+    private fun claveFavorita(emisora: Emisora): String = emisora.nombre + "|" + emisora.streaming
+
+    private fun esFavorita(emisora: Emisora): Boolean = favoritas.contains(claveFavorita(emisora))
+
+    private fun cargarFavoritas() {
+        favoritas.clear()
+        favoritas.addAll(
+            getSharedPreferences(PREFS_RADIO, MODE_PRIVATE).getStringSet("favoritas", emptySet()) ?: emptySet()
+        )
+    }
+
+    private fun alternarFavorita(emisora: Emisora) {
+        val clave = claveFavorita(emisora)
+        val agregada = if (favoritas.contains(clave)) {
+            favoritas.remove(clave)
+            false
+        } else {
+            favoritas.add(clave)
+            true
+        }
+        // Se guarda una copia nueva del conjunto (Android lo exige así).
+        getSharedPreferences(PREFS_RADIO, MODE_PRIVATE).edit()
+            .putStringSet("favoritas", HashSet(favoritas))
+            .apply()
+        Toast.makeText(
+            this,
+            if (agregada) "⭐ ${emisora.nombre} agregada a favoritas" else "${emisora.nombre} quitada de favoritas",
+            Toast.LENGTH_SHORT
+        ).show()
+        aplicarFiltros()
     }
 
     private fun reproducir(emisora: Emisora, avisarAlOtroCelular: Boolean) {
@@ -277,6 +349,16 @@ class RadioActivity : AppCompatActivity() {
             val emisora = emisorasFiltradas[position]
             vista.findViewById<TextView>(R.id.txtNombreEmisora).text = emisora.nombre
             vista.findViewById<TextView>(R.id.txtInfoEmisora).text = emisora.info
+            val estrella = vista.findViewById<TextView>(R.id.btnFavorita)
+            val favorita = esFavorita(emisora)
+            estrella.text = if (favorita) "★" else "☆"
+            estrella.setTextColor(
+                androidx.core.content.ContextCompat.getColor(
+                    this@RadioActivity,
+                    if (favorita) R.color.motero_estrella else R.color.motero_texto_tenue
+                )
+            )
+            estrella.setOnClickListener { alternarFavorita(emisora) }
             return vista
         }
     }
@@ -284,10 +366,9 @@ class RadioActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         if (ReproductorRadio.oyente === oyenteEstado) ReproductorRadio.oyente = null
-        // Desde la sala, la radio SIGUE sonando al salir de esta pantalla (se
-        // detiene con "Detener" o al salir de la sala). Desde la pantalla
-        // principal se detiene al salir, como siempre.
-        if (!soloEscuchar) detenerRadio()
+        // La radio SIGUE sonando al salir de esta pantalla (al menú, a la sala o
+        // a otra app). Se apaga con "Detener", con el botón flotante "Radio OFF"
+        // o con "Apagar radio" en la notificación.
         if (servicioConectado) {
             servicio?.oyenteComandoRadio = null
             unbindService(conexionServicio)

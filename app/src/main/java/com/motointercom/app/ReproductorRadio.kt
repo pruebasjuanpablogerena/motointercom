@@ -36,6 +36,8 @@ object ReproductorRadio {
     private var reproductor: ExoPlayer? = null
     private var contextoApp: Context? = null
     private var reintentosToken = 0
+    // Por qué falló la última vez (se muestra si ya no se puede reproducir).
+    private var ultimoMotivo = ""
     private var audioManager: AudioManager? = null
     private var pedidoDeFoco: AudioFocusRequest? = null
 
@@ -47,14 +49,22 @@ object ReproductorRadio {
     /** La pantalla de radio (si está abierta) se entera aquí de los cambios de estado. */
     var oyente: ((String) -> Unit)? = null
 
+    // Otras pantallas (el botón flotante "Radio OFF") se enteran cuando la radio
+    // se prende o se apaga.
+    private val observadores = mutableSetOf<() -> Unit>()
+
+    fun observar(alCambiar: () -> Unit) { observadores.add(alCambiar) }
+    fun dejarDeObservar(alCambiar: () -> Unit) { observadores.remove(alCambiar) }
+
     fun estaSonando(): Boolean = emisoraActual != null
 
     fun reproducir(contexto: Context, emisora: Emisora) {
-        detener()
+        pararReproduccion()
         contextoApp = contexto.applicationContext
         audioManager = contexto.applicationContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         emisoraActual = emisora
         reintentosToken = 0
+        ultimoMotivo = ""
         pedirFoco()
         if (emisora.pideToken) {
             pedirEnlaceYReproducir(emisora)
@@ -62,9 +72,17 @@ object ReproductorRadio {
             cambiarEstado("Cargando: ${emisora.nombre}...")
             iniciarReproductor(emisora, emisora.streaming)
         }
+        // La notificación fija que deja la radio sonando fuera de su pantalla.
+        RadioService.iniciar(contexto.applicationContext)
     }
 
+    /** Apaga la radio del todo (también su notificación). */
     fun detener() {
+        pararReproduccion()
+        contextoApp?.let { RadioService.detener(it) }
+    }
+
+    private fun pararReproduccion() {
         reproductor?.let { try { it.release() } catch (e: Exception) {} }
         reproductor = null
         emisoraActual = null
@@ -100,6 +118,9 @@ object ReproductorRadio {
             val fabricaHttp = DefaultHttpDataSource.Factory()
                 .setAllowCrossProtocolRedirects(true)
                 .setUserAgent("MotoIntercom/Android")
+                // Algunas emisoras pequeñas tardan en responder: se les da más tiempo.
+                .setConnectTimeoutMs(15000)
+                .setReadTimeoutMs(15000)
             val jugador = ExoPlayer.Builder(contexto)
                 .setMediaSourceFactory(DefaultMediaSourceFactory(contexto).setDataSourceFactory(fabricaHttp))
                 .build()
@@ -132,6 +153,7 @@ object ReproductorRadio {
                         jugador.seekToDefaultPosition()
                         jugador.prepare()
                     } else {
+                        ultimoMotivo = explicarError(error)
                         reintentar(emisora, enlace)
                     }
                 }
@@ -154,7 +176,8 @@ object ReproductorRadio {
     private fun reintentar(emisora: Emisora, enlace: String) {
         if (emisoraActual !== emisora) return
         if (reintentosToken >= 3) {
-            cambiarEstado("No se pudo reproducir ${emisora.nombre}")
+            val motivo = if (ultimoMotivo.isNotBlank()) ":\n$ultimoMotivo" else ""
+            cambiarEstado("No se pudo reproducir ${emisora.nombre}$motivo")
             return
         }
         reintentosToken++
@@ -164,6 +187,32 @@ object ReproductorRadio {
         } else {
             principal.postDelayed({ if (emisoraActual === emisora) iniciarReproductor(emisora, enlace) }, 1500)
         }
+    }
+
+    /** Traduce el error del reproductor a algo entendible, con el código
+     *  técnico al final para poder buscar la causa exacta. */
+    private fun explicarError(error: PlaybackException): String {
+        val texto = when (error.errorCode) {
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ->
+                "el servidor de la emisora no responde (puede estar apagada o haber cambiado de link)"
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
+                "el servidor de la emisora tardó demasiado en responder"
+            PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> {
+                val codigo = (error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.responseCode
+                "la emisora ya no está en ese link" + (codigo?.let { " (error $it)" } ?: "")
+            }
+            PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ->
+                "la emisora ya no está en ese link"
+            PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+            PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED ->
+                "el link no entrega audio que se pueda reproducir (puede ser una página web)"
+            PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED ->
+                "el celular bloqueó el link porque no es seguro (http)"
+            else -> "error de reproducción"
+        }
+        return "$texto [${error.errorCodeName}]"
     }
 
     private fun pedirFoco() {
@@ -200,5 +249,7 @@ object ReproductorRadio {
     private fun cambiarEstado(texto: String) {
         estado = texto
         oyente?.invoke(texto)
+        observadores.toList().forEach { it() }
+        contextoApp?.let { RadioService.actualizar(it, texto) }
     }
 }

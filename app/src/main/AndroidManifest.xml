@@ -91,6 +91,12 @@
           Mantiene la sala por internet conectada y recibiendo audios en
           segundo plano, aunque se cierre esta pantalla o se use otra app.
         -->
+        <!-- Deja la radio sonando fuera de su pantalla (con notificación y botón "Apagar radio"). -->
+        <service
+            android:name=".RadioService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
         <service
             android:name=".SalaInternetService"
             android:exported="false"

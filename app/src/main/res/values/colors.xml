@@ -6,6 +6,8 @@
     <color name="motero_alerta">#FF5A36</color>
     <color name="motero_texto">#EEEEE6</color>
     <color name="motero_texto_tenue">#9A9DA6</color>
+    <!-- Estrella de las emisoras favoritas -->
+    <color name="motero_estrella">#FFC107</color>
 
     <!-- Estado encendido/apagado, usado en interruptores y botones on/off -->
     <color name="motero_on">#3DDC84</color>

@@ -93,6 +93,7 @@ class MainActivity : AppCompatActivity(), IntercomService.Escucha {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        BotonRadioOff.instalar(this) // "📻 Radio OFF" mientras suena la radio
 
         mostrarUltimoErrorSiExiste()
 

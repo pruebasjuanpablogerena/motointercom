@@ -145,6 +145,7 @@ class SalaInternetActivity : AppCompatActivity(), SalaInternetService.Escucha {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sala_internet)
+        BotonRadioOff.instalar(this) // "📻 Radio OFF" mientras suena la radio
 
         prefs = getSharedPreferences("moto_intercom_prefs", MODE_PRIVATE)
         miId = prefs.getString("mi_id", null) ?: UUID.randomUUID().toString().also {
@@ -200,7 +201,7 @@ class SalaInternetActivity : AppCompatActivity(), SalaInternetService.Escucha {
         }
         btnLeerQr.setOnClickListener { abrirLectorQr() }
         btnSalirSala.setOnClickListener {
-            ReproductorRadio.detener()
+            // La radio NO se apaga al salir de la sala: se apaga con "Radio OFF".
             servicio?.salirDeSala()
             mostrarPanelDesconectado()
         }

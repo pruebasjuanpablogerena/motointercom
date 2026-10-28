@@ -66,7 +66,18 @@
         android:background="@drawable/bg_desplegable"
         android:padding="8dp"
         android:paddingEnd="52dp"
-        android:layout_marginBottom="10dp" />
+        android:layout_marginBottom="6dp" />
+
+    <!-- Cuántas emisoras salen con la búsqueda / el departamento elegido -->
+    <TextView
+        android:id="@+id/txtContadorEmisoras"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginBottom="6dp"
+        android:text="Cargando emisoras..."
+        android:textColor="@color/motero_texto_tenue"
+        android:textSize="13sp" />
 
     <ListView
         android:id="@+id/listaEmisoras"
