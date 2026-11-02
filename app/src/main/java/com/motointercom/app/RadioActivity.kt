@@ -56,7 +56,43 @@ class RadioActivity : AppCompatActivity() {
     // true = se abrió desde la sala por internet: la radio es solo para escucharla
     // uno mismo (no se comparte por Bluetooth) y sigue sonando al volver a la sala.
     private var soloEscuchar = false
-    private val oyenteEstado: (String) -> Unit = { texto -> txtReproduciendo.text = texto }
+    private val oyenteEstado: (String) -> Unit = { texto ->
+        txtReproduciendo.text = textoDeEstado(texto)
+        actualizarBotonRadio()
+    }
+
+    /** Cuando no suena nada, en vez de "Selecciona una emisora" se explica qué hacer. */
+    private fun textoDeEstado(texto: String): String =
+        if (!ReproductorRadio.estaSonando() && texto == "Selecciona una emisora") {
+            "Ninguna emisora sonando. Toca una emisora de la lista para escucharla."
+        } else texto
+
+    /**
+     * El botón de abajo cambia según lo que pasa, para que no confunda:
+     *  - Si suena una emisora: "⏹ Detener radio" (rojo).
+     *  - Si no suena nada y hay favoritas: "▶ Escuchar: <primera favorita>" (azul).
+     *  - Si no suena nada y no hay favoritas: se ve tenue y explica qué hacer.
+     */
+    private fun actualizarBotonRadio() {
+        btnDetenerRadio.isEnabled = true
+        if (ReproductorRadio.estaSonando()) {
+            btnDetenerRadio.text = "⏹ Detener radio"
+            btnDetenerRadio.setBackgroundResource(R.drawable.bg_boton_alerta)
+            btnDetenerRadio.alpha = 1f
+            return
+        }
+        btnDetenerRadio.setBackgroundResource(R.drawable.bg_boton)
+        val favorita = primeraFavorita()
+        if (favorita != null) {
+            btnDetenerRadio.text = "▶ Escuchar: ${favorita.nombre}"
+            btnDetenerRadio.alpha = 1f
+        } else {
+            btnDetenerRadio.text = "Toca una emisora de la lista para escucharla"
+            btnDetenerRadio.alpha = 0.6f
+        }
+    }
+
+    private fun primeraFavorita(): Emisora? = todasLasEmisoras.firstOrNull { esFavorita(it) }
 
     companion object {
         const val EXTRA_SOLO_ESCUCHAR = "solo_escuchar"
@@ -111,8 +147,8 @@ class RadioActivity : AppCompatActivity() {
         }
 
         // Muestra lo que ya esté sonando (por ejemplo, si se volvió a abrir esta pantalla).
-        txtReproduciendo.text = ReproductorRadio.estado
-        btnDetenerRadio.isEnabled = ReproductorRadio.estaSonando()
+        txtReproduciendo.text = textoDeEstado(ReproductorRadio.estado)
+        actualizarBotonRadio()
         ReproductorRadio.oyente = oyenteEstado
 
         cargarEmisorasEnSegundoPlano()
@@ -129,9 +165,23 @@ class RadioActivity : AppCompatActivity() {
         }
 
         btnDetenerRadio.setOnClickListener {
-            detenerRadio()
-            if (switchCompartirRadio.isChecked) {
-                servicio?.enviarComandoRadio("RADIO_STOP")
+            if (ReproductorRadio.estaSonando()) {
+                detenerRadio()
+                if (switchCompartirRadio.isChecked) {
+                    servicio?.enviarComandoRadio("RADIO_STOP")
+                }
+            } else {
+                val favorita = primeraFavorita()
+                if (favorita != null) {
+                    reproducir(favorita, avisarAlOtroCelular = switchCompartirRadio.isChecked)
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Toca una emisora de la lista para escucharla. Con la ☆ la guardas en favoritas " +
+                            "y aquí aparecerá para escucharla con un toque.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
 
@@ -204,6 +254,7 @@ class RadioActivity : AppCompatActivity() {
                 runOnUiThread {
                     prepararSpinnerDepartamentos()
                     aplicarFiltros()
+                    actualizarBotonRadio() // ya se sabe cuál es la primera favorita
                 }
             } catch (e: Exception) {
                 runOnUiThread {
@@ -306,6 +357,7 @@ class RadioActivity : AppCompatActivity() {
             Toast.LENGTH_SHORT
         ).show()
         aplicarFiltros()
+        actualizarBotonRadio()
     }
 
     private fun reproducir(emisora: Emisora, avisarAlOtroCelular: Boolean) {
@@ -319,7 +371,7 @@ class RadioActivity : AppCompatActivity() {
         }
 
         ReproductorRadio.reproducir(this, emisora)
-        btnDetenerRadio.isEnabled = true
+        actualizarBotonRadio()
 
         if (avisarAlOtroCelular && !soloEscuchar) {
             servicio?.enviarComandoRadio("RADIO_PLAY|${enlaceParaCompartir(emisora)}|${emisora.nombre}")
@@ -332,7 +384,7 @@ class RadioActivity : AppCompatActivity() {
     private fun detenerRadio() {
         ReproductorRadio.detener()
         reproduciendoPorAvisoDelOtro = false
-        btnDetenerRadio.isEnabled = false
+        actualizarBotonRadio()
         if (switchCompartirRadio.isChecked) {
             switchCompartirRadio.isChecked = false
         }

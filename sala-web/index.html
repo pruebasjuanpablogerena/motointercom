@@ -137,6 +137,22 @@
     margin: 12px 0 2px 0;
     accent-color: var(--acento);
   }
+  #avisoSonido {
+    display: none;
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    background: var(--acento-oscuro);
+    color: var(--texto);
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 15px;
+    z-index: 10;
+  }
   .aviso-permiso {
     font-size: 12px;
     color: var(--texto-tenue);
@@ -158,6 +174,10 @@
     <input id="editCodigo" placeholder="Código de la sala (ej: A3F9K2)" maxlength="8" style="text-transform:uppercase">
     <button class="boton" id="btnUnirse">Unirse a esa sala</button>
   </div>
+
+  <!-- Al entrar directo desde el link o el QR: Safari solo deja activar el
+       sonido después de un toque, así que se pide uno. -->
+  <div id="avisoSonido">🔊 Toca aquí para activar el sonido de la sala</div>
 
   <div id="panelConectado">
     <div class="panel codigo">
@@ -674,7 +694,25 @@
   const parametros = new URLSearchParams(window.location.search);
   const salaDesdeEnlace = parametros.get('sala');
   if (salaDesdeEnlace) {
-    editCodigo.value = salaDesdeEnlace.toUpperCase();
+    const codigoEnlace = salaDesdeEnlace.trim().toUpperCase();
+    editCodigo.value = codigoEnlace;
+    if (codigoEnlace.length >= 4) {
+      // Antes había que tocar "Unirse a esa sala"; ahora, al abrir el link o
+      // leer el QR, se entra DIRECTO a la sala (con el nombre guardado o "Motero").
+      entrarASala(codigoEnlace, guardarNombre());
+      const avisoSonido = document.getElementById('avisoSonido');
+      avisoSonido.style.display = 'block';
+      const activarSonido = function () {
+        avisoSonido.style.display = 'none';
+        prepararAudioSalida();
+        modoAudio('playback');
+        mantenerPantallaEncendida();
+        document.removeEventListener('touchend', activarSonido, true);
+        document.removeEventListener('click', activarSonido, true);
+      };
+      document.addEventListener('touchend', activarSonido, true);
+      document.addEventListener('click', activarSonido, true);
+    }
   }
 })();
 </script>

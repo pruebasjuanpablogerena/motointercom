@@ -49,6 +49,12 @@ class MainActivity : AppCompatActivity(), IntercomService.Escucha {
     private var servicio: IntercomService? = null
     private var servicioConectado = false
     private var altavozActivo = false
+
+    // Antes los botones de micrófono y altavoz quedaban "apagados" sin conexión y
+    // al tocarlos no pasaba nada. Ahora siempre responden: si no sirven en ese
+    // momento, explican por qué con un aviso que se lee y desaparece solo.
+    private var llamadaActiva = false
+    private var modoWalkieActivo = false
     private val manejador = Handler(Looper.getMainLooper())
     private var pendienteDetenerBluetooth: Runnable? = null
     private var compartiendoMusica = false
@@ -102,6 +108,7 @@ class MainActivity : AppCompatActivity(), IntercomService.Escucha {
         btnPasajero = findViewById(R.id.btnPasajero)
         btnSilenciar = findViewById(R.id.btnSilenciar)
         btnAltavoz = findViewById(R.id.btnAltavoz)
+        actualizarAparienciaBotones() // se pueden tocar aunque no haya conexión (explican para qué sirven)
         btnDesconectar = findViewById(R.id.btnDesconectar)
         switchCompartirMusica = findViewById(R.id.switchCompartirMusica)
         seekVolumen = findViewById(R.id.seekVolumen)
@@ -124,11 +131,25 @@ class MainActivity : AppCompatActivity(), IntercomService.Escucha {
         btnConductor.setOnClickListener { modoConductor() }
         btnPasajero.setOnClickListener { modoPasajero() }
         btnSilenciar.setOnClickListener {
+            if (!llamadaActiva) {
+                avisar("🎙️ \"Silenciar micrófono\" sirve cuando estás conectado por Bluetooth con el otro casco. " +
+                    "Primero toca \"Soy el conductor\" o \"Soy el pasajero\".")
+                return@setOnClickListener
+            }
+            if (modoWalkieActivo) {
+                avisar("En modo walkie-talkie el micrófono se abre solo mientras mantienes presionado \"Hablar\".")
+                return@setOnClickListener
+            }
             val silenciado = servicio?.alternarSilencio() ?: false
             btnSilenciar.text = if (silenciado) "Activar micrófono" else "Silenciar micrófono"
             btnSilenciar.setBackgroundResource(if (silenciado) R.drawable.bg_boton_apagado else R.drawable.bg_boton_encendido)
         }
         btnAltavoz.setOnClickListener {
+            if (!llamadaActiva) {
+                avisar("🔊 \"Altavoz\" sirve cuando estás conectado por Bluetooth: hace que la voz del otro " +
+                    "salga por el parlante del celular en vez del auricular. Primero conéctate.")
+                return@setOnClickListener
+            }
             altavozActivo = !altavozActivo
             servicio?.activarAltavoz(altavozActivo)
             btnAltavoz.text = if (altavozActivo) "Altavoz: encendido" else "Altavoz: apagado"
@@ -163,7 +184,8 @@ class MainActivity : AppCompatActivity(), IntercomService.Escucha {
         switchWalkie.setOnCheckedChangeListener { _, activar ->
             if (activar) {
                 servicio?.establecerSilencio(true)
-                btnSilenciar.isEnabled = false
+                modoWalkieActivo = true
+                actualizarAparienciaBotones()
                 btnHablar.isEnabled = true
                 if (!altavozActivo) {
                     altavozActivo = true
@@ -173,7 +195,8 @@ class MainActivity : AppCompatActivity(), IntercomService.Escucha {
                 }
             } else {
                 servicio?.establecerSilencio(false)
-                btnSilenciar.isEnabled = true
+                modoWalkieActivo = false
+                actualizarAparienciaBotones()
                 btnHablar.isEnabled = false
                 btnHablar.text = "🎙️ Mantén presionado para hablar"
                 btnHablar.setBackgroundResource(R.drawable.bg_boton)
@@ -384,11 +407,25 @@ class MainActivity : AppCompatActivity(), IntercomService.Escucha {
         }
     }
 
+    /** Los botones siempre se pueden tocar; cuando no sirven se ven más tenues. */
+    private fun actualizarAparienciaBotones() {
+        btnSilenciar.isEnabled = true
+        btnAltavoz.isEnabled = true
+        btnSilenciar.alpha = if (llamadaActiva && !modoWalkieActivo) 1f else 0.55f
+        btnAltavoz.alpha = if (llamadaActiva) 1f else 0.55f
+    }
+
+    /** Aviso que se alcanza a leer y desaparece solo. */
+    private fun avisar(texto: String) {
+        Toast.makeText(this, texto, Toast.LENGTH_LONG).show()
+    }
+
     private fun actualizarBotones(conectando: Boolean) {
         btnConductor.isEnabled = !conectando
         btnPasajero.isEnabled = !conectando
-        btnSilenciar.isEnabled = conectando && !switchWalkie.isChecked
-        btnAltavoz.isEnabled = conectando
+        llamadaActiva = conectando
+        modoWalkieActivo = switchWalkie.isChecked
+        actualizarAparienciaBotones()
         btnDesconectar.isEnabled = conectando
         switchCompartirMusica.isEnabled = conectando
         seekVolumen.isEnabled = conectando
