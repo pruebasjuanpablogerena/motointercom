@@ -1,0 +1,429 @@
+package com.motointercom.app
+
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.os.Bundle
+import android.os.IBinder
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.BaseAdapter
+import android.widget.Button
+import android.widget.EditText
+import android.widget.ListView
+import android.widget.Spinner
+import android.widget.Switch
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import org.json.JSONArray
+
+data class Emisora(
+    val departamento: String,
+    val nombre: String,
+    val info: String,
+    val streaming: String,
+    val web: String,
+    // true = "streaming" no es el audio sino el servidor que entrega el link
+    // del momento (con token). Ver EnlaceConToken.
+    val pideToken: Boolean = false
+)
+
+class RadioActivity : AppCompatActivity() {
+
+    private lateinit var txtBuscar: EditText
+    private lateinit var spinnerDepartamento: Spinner
+    private lateinit var listaEmisoras: ListView
+    private lateinit var txtReproduciendo: TextView
+    private lateinit var btnDetenerRadio: Button
+    private lateinit var switchCompartirRadio: Switch
+
+    private var todasLasEmisoras: List<Emisora> = emptyList()
+    private var emisorasFiltradas: List<Emisora> = emptyList()
+    private var adaptador: AdaptadorEmisoras? = null
+    private lateinit var txtContadorEmisoras: TextView
+
+    // Emisoras marcadas con la estrella (se guardan en el celular).
+    private val favoritas = mutableSetOf<String>()
+
+    private var reproduciendoPorAvisoDelOtro = false
+
+    // true = se abrió desde la sala por internet: la radio es solo para escucharla
+    // uno mismo (no se comparte por Bluetooth) y sigue sonando al volver a la sala.
+    private var soloEscuchar = false
+    private val oyenteEstado: (String) -> Unit = { texto ->
+        txtReproduciendo.text = textoDeEstado(texto)
+        actualizarBotonRadio()
+    }
+
+    /** Cuando no suena nada, en vez de "Selecciona una emisora" se explica qué hacer. */
+    private fun textoDeEstado(texto: String): String =
+        if (!ReproductorRadio.estaSonando() && texto == "Selecciona una emisora") {
+            "Ninguna emisora sonando. Toca una emisora de la lista para escucharla."
+        } else texto
+
+    /**
+     * El botón de abajo cambia según lo que pasa, para que no confunda:
+     *  - Si suena una emisora: "⏹ Detener radio" (rojo).
+     *  - Si no suena nada y hay favoritas: "▶ Escuchar: <primera favorita>" (azul).
+     *  - Si no suena nada y no hay favoritas: se ve tenue y explica qué hacer.
+     */
+    private fun actualizarBotonRadio() {
+        btnDetenerRadio.isEnabled = true
+        if (ReproductorRadio.estaSonando()) {
+            btnDetenerRadio.text = "⏹ Detener radio"
+            btnDetenerRadio.setBackgroundResource(R.drawable.bg_boton_alerta)
+            btnDetenerRadio.alpha = 1f
+            return
+        }
+        btnDetenerRadio.setBackgroundResource(R.drawable.bg_boton)
+        val favorita = primeraFavorita()
+        if (favorita != null) {
+            btnDetenerRadio.text = "▶ Escuchar: ${favorita.nombre}"
+            btnDetenerRadio.alpha = 1f
+        } else {
+            btnDetenerRadio.text = "Toca una emisora de la lista para escucharla"
+            btnDetenerRadio.alpha = 0.6f
+        }
+    }
+
+    private fun primeraFavorita(): Emisora? = todasLasEmisoras.firstOrNull { esFavorita(it) }
+
+    companion object {
+        const val EXTRA_SOLO_ESCUCHAR = "solo_escuchar"
+
+        private const val TODOS_LOS_DEPARTAMENTOS = "Todos los departamentos"
+        private const val MIS_FAVORITAS = "⭐ Mis favoritas"
+        private const val PREFS_RADIO = "moto_intercom_radio"
+
+        // Marca para avisar por Bluetooth que el link es de un servidor con token:
+        // así el otro celular pide SU propio link (el token del momento se vence).
+        private const val PREFIJO_TOKEN = "token:"
+    }
+
+    private var servicio: IntercomService? = null
+    private var servicioConectado = false
+
+    private val conexionServicio = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            val b = binder as IntercomService.IntercomBinder
+            servicio = b.obtenerServicio()
+            servicioConectado = true
+            servicio?.oyenteComandoRadio = { comando -> runOnUiThread { manejarComandoRecibido(comando) } }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            servicio = null
+            servicioConectado = false
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_radio)
+
+        txtBuscar = findViewById(R.id.txtBuscar)
+        txtContadorEmisoras = findViewById(R.id.txtContadorEmisoras)
+        cargarFavoritas()
+        spinnerDepartamento = findViewById(R.id.spinnerDepartamento)
+        listaEmisoras = findViewById(R.id.listaEmisoras)
+        txtReproduciendo = findViewById(R.id.txtReproduciendo)
+        btnDetenerRadio = findViewById(R.id.btnDetenerRadio)
+        switchCompartirRadio = findViewById(R.id.switchCompartirRadio)
+        findViewById<View>(R.id.btnAtras).setOnClickListener { finish() }
+
+        soloEscuchar = intent.getBooleanExtra(EXTRA_SOLO_ESCUCHAR, false)
+        if (soloEscuchar) {
+            // Desde la sala: solo para escuchar, sin compartir con nadie.
+            switchCompartirRadio.visibility = View.GONE
+            findViewById<TextView>(R.id.txtTituloRadio).text = "📻 Radio (solo para ti)"
+        } else {
+            bindService(Intent(this, IntercomService::class.java), conexionServicio, Context.BIND_AUTO_CREATE)
+        }
+
+        // Muestra lo que ya esté sonando (por ejemplo, si se volvió a abrir esta pantalla).
+        txtReproduciendo.text = textoDeEstado(ReproductorRadio.estado)
+        actualizarBotonRadio()
+        ReproductorRadio.oyente = oyenteEstado
+
+        cargarEmisorasEnSegundoPlano()
+
+        txtBuscar.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) { aplicarFiltros() }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+
+        listaEmisoras.setOnItemClickListener { _, _, posicion, _ ->
+            val emisora = emisorasFiltradas.getOrNull(posicion) ?: return@setOnItemClickListener
+            reproducir(emisora, avisarAlOtroCelular = switchCompartirRadio.isChecked)
+        }
+
+        btnDetenerRadio.setOnClickListener {
+            if (ReproductorRadio.estaSonando()) {
+                detenerRadio()
+                if (switchCompartirRadio.isChecked) {
+                    servicio?.enviarComandoRadio("RADIO_STOP")
+                }
+            } else {
+                val favorita = primeraFavorita()
+                if (favorita != null) {
+                    reproducir(favorita, avisarAlOtroCelular = switchCompartirRadio.isChecked)
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Toca una emisora de la lista para escucharla. Con la ☆ la guardas en favoritas " +
+                            "y aquí aparecerá para escucharla con un toque.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+
+        // El interruptor ya NO abre ningún cuadro de "compartir pantalla". Simplemente
+        // manda un aviso por Bluetooth al otro celular para que sintonice (o deje de
+        // sintonizar) la misma emisora, cada uno reproduciéndola desde su propio internet.
+        switchCompartirRadio.setOnCheckedChangeListener { _, activar ->
+            if (activar) {
+                val emisora = ReproductorRadio.emisoraActual
+                if (emisora == null) {
+                    Toast.makeText(this, "Primero elige y reproduce una emisora", Toast.LENGTH_SHORT).show()
+                    switchCompartirRadio.isChecked = false
+                    return@setOnCheckedChangeListener
+                }
+                servicio?.enviarComandoRadio("RADIO_PLAY|${enlaceParaCompartir(emisora)}|${emisora.nombre}")
+                Toast.makeText(this, "Avisando al otro casco que sintonice esta emisora...", Toast.LENGTH_SHORT).show()
+            } else {
+                servicio?.enviarComandoRadio("RADIO_STOP")
+            }
+        }
+    }
+
+    /** Se llama cuando el OTRO celular (conductor o pasajero) avisó por Bluetooth
+     *  que hay que sintonizar o dejar de sintonizar una emisora. */
+    private fun manejarComandoRecibido(comando: String) {
+        if (comando == "RADIO_STOP") {
+            if (reproduciendoPorAvisoDelOtro) {
+                detenerRadio()
+            }
+            return
+        }
+        if (comando.startsWith("RADIO_PLAY|")) {
+            val partes = comando.split("|")
+            if (partes.size >= 3) {
+                val url = partes[1]
+                val nombre = partes.subList(2, partes.size).joinToString("|")
+                val pideToken = url.startsWith(PREFIJO_TOKEN)
+                val emisora = Emisora(
+                    "", nombre, "Sintonizada por el otro casco",
+                    url.removePrefix(PREFIJO_TOKEN), "", pideToken
+                )
+                reproduciendoPorAvisoDelOtro = true
+                reproducir(emisora, avisarAlOtroCelular = false)
+                Toast.makeText(this, "El otro casco te compartió una emisora", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun cargarEmisorasEnSegundoPlano() {
+        Thread {
+            try {
+                val texto = assets.open("emisoras.json").bufferedReader().use { it.readText() }
+                val arreglo = JSONArray(texto)
+                val lista = mutableListOf<Emisora>()
+                for (i in 0 until arreglo.length()) {
+                    val o = arreglo.getJSONObject(i)
+                    val url = o.optString("s", "")
+                    lista.add(
+                        Emisora(
+                            departamento = o.optString("d", ""),
+                            nombre = o.optString("n", ""),
+                            info = o.optString("i", ""),
+                            streaming = url,
+                            web = o.optString("w", ""),
+                            pideToken = o.optString("t", "") == "token"
+                        )
+                    )
+                }
+                todasLasEmisoras = lista.sortedBy { it.nombre }
+                runOnUiThread {
+                    prepararSpinnerDepartamentos()
+                    aplicarFiltros()
+                    actualizarBotonRadio() // ya se sabe cuál es la primera favorita
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, "No se pudo cargar la lista de emisoras", Toast.LENGTH_LONG).show()
+                }
+            }
+        }.start()
+    }
+
+    private fun prepararSpinnerDepartamentos() {
+        val departamentos = mutableListOf(TODOS_LOS_DEPARTAMENTOS, MIS_FAVORITAS)
+        departamentos.addAll(todasLasEmisoras.map { it.departamento }.distinct().sorted())
+        val adaptadorSpinner = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, departamentos)
+        spinnerDepartamento.adapter = adaptadorSpinner
+        spinnerDepartamento.setOnItemSelectedListener(object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                aplicarFiltros()
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        })
+    }
+
+    private fun aplicarFiltros() {
+        val texto = txtBuscar.text.toString().trim().lowercase()
+        val departamentoElegido = (spinnerDepartamento.selectedItem as? String) ?: TODOS_LOS_DEPARTAMENTOS
+
+        emisorasFiltradas = todasLasEmisoras.filter { emisora ->
+            val coincideDepartamento = when (departamentoElegido) {
+                TODOS_LOS_DEPARTAMENTOS -> true
+                MIS_FAVORITAS -> esFavorita(emisora)
+                else -> emisora.departamento == departamentoElegido
+            }
+            val coincideTexto = texto.isEmpty() ||
+                emisora.nombre.lowercase().contains(texto) ||
+                emisora.info.lowercase().contains(texto)
+            coincideDepartamento && coincideTexto
+        }
+
+        if (adaptador == null) {
+            adaptador = AdaptadorEmisoras()
+            listaEmisoras.adapter = adaptador
+        } else {
+            adaptador?.notifyDataSetChanged()
+        }
+        actualizarContador(texto, departamentoElegido)
+    }
+
+    /** Muestra cuántas emisoras salen con la búsqueda y el departamento elegidos. */
+    private fun actualizarContador(texto: String, departamento: String) {
+        if (todasLasEmisoras.isEmpty()) {
+            txtContadorEmisoras.text = "Cargando emisoras..."
+            return
+        }
+        val cantidad = emisorasFiltradas.size
+        if (departamento == MIS_FAVORITAS && favoritas.isEmpty()) {
+            txtContadorEmisoras.text = "Aún no tienes favoritas: toca la ☆ de una emisora para agregarla."
+            return
+        }
+        val numero = String.format(java.util.Locale("es", "CO"), "%,d", cantidad)
+        val palabra = if (cantidad == 1) "emisora" else "emisoras"
+        val donde = when (departamento) {
+            TODOS_LOS_DEPARTAMENTOS -> ""
+            MIS_FAVORITAS -> " en tus favoritas"
+            else -> " en $departamento"
+        }
+        val busqueda = if (texto.isNotEmpty()) " con \"${txtBuscar.text.toString().trim()}\"" else ""
+        txtContadorEmisoras.text = "📻 $numero $palabra$busqueda$donde"
+    }
+
+    // ---------- Favoritas ----------
+
+    /** Una emisora se reconoce por su nombre y su link (hay nombres repetidos en varias ciudades). */
+    private fun claveFavorita(emisora: Emisora): String = emisora.nombre + "|" + emisora.streaming
+
+    private fun esFavorita(emisora: Emisora): Boolean = favoritas.contains(claveFavorita(emisora))
+
+    private fun cargarFavoritas() {
+        favoritas.clear()
+        favoritas.addAll(
+            getSharedPreferences(PREFS_RADIO, MODE_PRIVATE).getStringSet("favoritas", emptySet()) ?: emptySet()
+        )
+    }
+
+    private fun alternarFavorita(emisora: Emisora) {
+        val clave = claveFavorita(emisora)
+        val agregada = if (favoritas.contains(clave)) {
+            favoritas.remove(clave)
+            false
+        } else {
+            favoritas.add(clave)
+            true
+        }
+        // Se guarda una copia nueva del conjunto (Android lo exige así).
+        getSharedPreferences(PREFS_RADIO, MODE_PRIVATE).edit()
+            .putStringSet("favoritas", HashSet(favoritas))
+            .apply()
+        Toast.makeText(
+            this,
+            if (agregada) "⭐ ${emisora.nombre} agregada a favoritas" else "${emisora.nombre} quitada de favoritas",
+            Toast.LENGTH_SHORT
+        ).show()
+        aplicarFiltros()
+        actualizarBotonRadio()
+    }
+
+    private fun reproducir(emisora: Emisora, avisarAlOtroCelular: Boolean) {
+        if (emisora.streaming.isBlank()) {
+            Toast.makeText(
+                this,
+                "Esta emisora todavía no tiene enlace de transmisión configurado.",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        ReproductorRadio.reproducir(this, emisora)
+        actualizarBotonRadio()
+
+        if (avisarAlOtroCelular && !soloEscuchar) {
+            servicio?.enviarComandoRadio("RADIO_PLAY|${enlaceParaCompartir(emisora)}|${emisora.nombre}")
+        }
+    }
+
+    private fun enlaceParaCompartir(emisora: Emisora): String =
+        if (emisora.pideToken) PREFIJO_TOKEN + emisora.streaming else emisora.streaming
+
+    private fun detenerRadio() {
+        ReproductorRadio.detener()
+        reproduciendoPorAvisoDelOtro = false
+        actualizarBotonRadio()
+        if (switchCompartirRadio.isChecked) {
+            switchCompartirRadio.isChecked = false
+        }
+    }
+
+    private inner class AdaptadorEmisoras : BaseAdapter() {
+        override fun getCount(): Int = emisorasFiltradas.size
+        override fun getItem(position: Int): Any = emisorasFiltradas[position]
+        override fun getItemId(position: Int): Long = position.toLong()
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val vista = convertView ?: LayoutInflater.from(this@RadioActivity)
+                .inflate(R.layout.item_emisora, parent, false)
+            val emisora = emisorasFiltradas[position]
+            vista.findViewById<TextView>(R.id.txtNombreEmisora).text = emisora.nombre
+            vista.findViewById<TextView>(R.id.txtInfoEmisora).text = emisora.info
+            val estrella = vista.findViewById<TextView>(R.id.btnFavorita)
+            val favorita = esFavorita(emisora)
+            estrella.text = if (favorita) "★" else "☆"
+            estrella.setTextColor(
+                androidx.core.content.ContextCompat.getColor(
+                    this@RadioActivity,
+                    if (favorita) R.color.motero_estrella else R.color.motero_texto_tenue
+                )
+            )
+            estrella.setOnClickListener { alternarFavorita(emisora) }
+            return vista
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (ReproductorRadio.oyente === oyenteEstado) ReproductorRadio.oyente = null
+        // La radio SIGUE sonando al salir de esta pantalla (al menú, a la sala o
+        // a otra app). Se apaga con "Detener", con el botón flotante "Radio OFF"
+        // o con "Apagar radio" en la notificación.
+        if (servicioConectado) {
+            servicio?.oyenteComandoRadio = null
+            unbindService(conexionServicio)
+        }
+    }
+}
