@@ -1,0 +1,28 @@
+name: Borrar audios viejos de la sala
+
+# Se ejecuta solo cada hora, o a mano desde la pestaña "Actions".
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+jobs:
+  borrar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar lo necesario para hablar con Firebase
+        run: pip install google-auth==2.35.0 requests==2.32.3
+
+      - name: Borrar audios de más de 24 horas
+        env:
+          FIREBASE_CUENTA_DE_SERVICIO: ${{ secrets.FIREBASE_CUENTA_DE_SERVICIO }}
+          HORAS_A_GUARDAR: "24"
+        run: python scripts/borrar_audios_viejos.py
